@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart'; // Import the url_launcher package
 
 class JobSearchScreen extends StatefulWidget {
   const JobSearchScreen({Key? key}) : super(key: key);
@@ -14,6 +15,7 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
   List<dynamic> jobPosts = [];
   bool isLoading = false;
   bool hasMoreJobs = true;
+  bool hasError = false;
   int currentPage = 1;
   final int jobsPerPage = 5;
   final TextEditingController _titleController = TextEditingController();
@@ -35,6 +37,7 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
     if (isLoading) return;
     setState(() {
       isLoading = true;
+      hasError = false;
     });
 
     final uri =
@@ -63,16 +66,14 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
           isLoading = false;
         });
       } else {
-        // Handle HTTP errors
-        print('HTTP Error: ${response.statusCode}');
         setState(() {
+          hasError = true;
           isLoading = false;
         });
       }
     } catch (e) {
-      // Handle any exceptions
-      print('Exception: $e');
       setState(() {
+        hasError = true;
         isLoading = false;
       });
     }
@@ -103,8 +104,12 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
     _fetchJobs(isRefresh: true);
   }
 
-  void _launchURL(String url) async {
-    // Implement URL launch logic
+  Future<void> _launchURL(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
+    }
   }
 
   @override
@@ -119,22 +124,30 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: _titleController,
                   decoration: const InputDecoration(
                     labelText: 'Job Title',
+                    border: OutlineInputBorder(),
                   ),
                 ),
+                SizedBox(height: 8.0),
                 TextField(
                   controller: _keywordsController,
                   decoration: const InputDecoration(
                     labelText: 'Keywords',
+                    border: OutlineInputBorder(),
                   ),
                 ),
+                SizedBox(height: 8.0),
                 ElevatedButton(
                   onPressed: _updateFilter,
                   child: const Text('Search'),
+                  style: ElevatedButton.styleFrom(
+                    primary: const Color(0xFF9E47FF),
+                  ),
                 ),
               ],
             ),
@@ -149,37 +162,55 @@ class _JobSearchScreenState extends State<JobSearchScreen> {
                 }
                 return true;
               },
-              child: ListView.builder(
-                itemCount: jobPosts.length + (isLoading ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == jobPosts.length) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final job = jobPosts[index];
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                        vertical: 8.0, horizontal: 16.0),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16.0),
-                      title: Text(job['title']),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              child: hasError
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(job['company']['display_name']),
-                          Text(job['location']['display_name']),
-                          Text('Posted: ${job['created']}'),
+                          const Text('Error loading jobs.'),
+                          SizedBox(height: 8.0),
+                          ElevatedButton(
+                            onPressed: _onRefresh,
+                            child: const Text('Retry'),
+                          ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.arrow_forward),
-                        onPressed: () => _launchURL(job['redirect_url']),
-                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: jobPosts.length + (isLoading ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == jobPosts.length) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final job = jobPosts[index];
+                        final String jobUrl = job['redirect_url'] ?? '';
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 16.0),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16.0),
+                            title: Text(job['title']),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(job['company']['display_name']),
+                                Text(job['location']['display_name']),
+                                Text('Posted: ${job['created']}'),
+                              ],
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.arrow_forward),
+                              onPressed: jobUrl.isNotEmpty
+                                  ? () => _launchURL(jobUrl)
+                                  : null, // Disable button if URL is empty
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ),
         ],
