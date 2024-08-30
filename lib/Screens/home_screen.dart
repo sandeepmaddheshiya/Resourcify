@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_zoom_drawer/flutter_zoom_drawer.dart';
 import 'package:resourcify/Screens/contact%20us/contact_us_screen.dart';
+import 'package:resourcify/Screens/jobs_search_screen.dart';
 import 'package:resourcify/Screens/notes/notes_screen.dart';
 import 'package:resourcify/Screens/previous%20year/previous_years_screen.dart';
 import 'package:resourcify/Screens/quantums/quantums_screen.dart';
@@ -33,6 +34,21 @@ class _HomeScreenState extends State<HomeScreen> {
             size: 40,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const JobSearchScreen(),
+                  ));
+            },
+            icon: const Icon(
+              Icons.work_outline,
+              size: 40,
+            ),
+          ),
+        ],
         centerTitle: true,
         foregroundColor: Colors.white,
         backgroundColor: const Color(0xFF9E47FF),

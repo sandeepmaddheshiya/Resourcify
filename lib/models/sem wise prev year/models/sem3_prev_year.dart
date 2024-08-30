@@ -95,6 +95,15 @@ class Sem3PrevYear extends StatelessWidget {
             const SizedBox(
               height: 10,
             ),
+            PrevYearcardModel(
+                onTap: () {
+                  launchUrls(
+                      'https://drive.google.com/drive/folders/1qwCKhHFu8t528LmaetMo6xr9eh8EN_M1?usp=sharing');
+                },
+                sessionName: '2023-24'),
+            const SizedBox(
+              height: 10,
+            ),
           ],
         ),
       ),
